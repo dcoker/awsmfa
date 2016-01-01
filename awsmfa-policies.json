@@ -1,0 +1,181 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "IAM Policies for use with the awsmfa.py script.",
+  "Metadata": {
+    "Setup": [
+      "Create with: ",
+      "aws cloudformation create-stack --stack-name awsmfa --template-body file://./awsmfa-policies.json --capabilities CAPABILITY_IAM"
+    ]
+  },
+  "Resources": {
+    "AwsMfaMinimumPolicies": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "AwsMfaMinimumPolicies",
+        "Groups": [
+          {
+            "Ref": "AwsMfaUsersGroup"
+          },
+          {
+            "Ref": "AwsMfaPowerUsersGroup"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "AllowUserToIdentifyThemselves",
+              "Effect": "Allow",
+              "Action": [
+                "iam:GetUser"
+              ],
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:aws:iam::",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":user/${aws:username}"
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "Sid": "AllowAwsMfaCli",
+              "Effect": "Allow",
+              "Action": [
+                "iam:ListMFADevices"
+              ],
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:aws:iam::",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":mfa/${aws:username}"
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:aws:iam::",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":user/${aws:username}"
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "Sid": "AllowAwsMfaCliToGetSessionToken",
+              "Effect": "Allow",
+              "Action": [
+                "sts:GetSessionToken"
+              ],
+              "Resource": "*",
+              "Condition": {
+                "NumericLessThanEquals": {
+                  "sts:DurationSeconds": 43200
+                }
+              }
+            },
+            {
+              "Sid": "AllowUsersToCreateEnableResyncTheirOwnVirtualMFADevice",
+              "Effect": "Allow",
+              "Action": [
+                "iam:CreateVirtualMFADevice",
+                "iam:EnableMFADevice",
+                "iam:ResyncMFADevice"
+              ],
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:aws:iam::",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":mfa/${aws:username}"
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:aws:iam::",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":user/${aws:username}"
+                    ]
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "AwsMfaAllowAssumeAllRoles": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "AwsMfaAllowAssumeAllRoles",
+        "Groups": [
+          {
+            "Ref": "AwsMfaPowerUsersGroup"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "AllowAssumeAnyRole",
+              "Effect": "Allow",
+              "Action": [
+                "sts:AssumeRole"
+              ],
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:aws:iam::",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":role/*"
+                    ]
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "AwsMfaUsersGroup": {
+      "Type": "AWS::IAM::Group",
+      "Properties": {
+      }
+    },
+    "AwsMfaPowerUsersGroup": {
+      "Type": "AWS::IAM::Group",
+      "Properties": {
+      }
+    }
+  }
+}
+
