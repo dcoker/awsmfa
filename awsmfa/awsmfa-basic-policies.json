@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "IAM Policies for use with the awsmfa.py script.",
+  "Description": "IAM Policies for use with awsmfa.",
   "Metadata": {
     "Setup": [
       "Create with: ",
@@ -17,7 +17,7 @@
             "Ref": "AwsMfaUsersGroup"
           },
           {
-            "Ref": "AwsMfaPowerUsersGroup"
+            "Ref": "AwsMfaAssumeAnyRoleGroup"
           }
         ],
         "PolicyDocument": {
@@ -135,7 +135,7 @@
         "PolicyName": "AwsMfaAllowAssumeAllRoles",
         "Groups": [
           {
-            "Ref": "AwsMfaPowerUsersGroup"
+            "Ref": "AwsMfaAssumeAnyRoleGroup"
           }
         ],
         "PolicyDocument": {
@@ -160,21 +160,56 @@
                     ]
                   ]
                 }
-              ]
+              ],
+              "Condition": {
+                "Bool": {
+                  "aws:MultiFactorAuthPresent": "true"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "AwsMfaPowerUsersRole": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "AwsMfaPowerUsersRole",
+        "Groups": [
+          {
+            "Ref": "AwsMfaPowerUsersGroup"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "AllowEverythingExceptIAM",
+              "Effect": "Allow",
+              "NotAction": [
+                "iam:*"
+              ],
+              "Resource": [
+                "*"
+              ],
+              "Condition": {
+                "Bool": {
+                  "aws:MultiFactorAuthPresent": "true"
+                }
+              }
             }
           ]
         }
       }
     },
     "AwsMfaUsersGroup": {
-      "Type": "AWS::IAM::Group",
-      "Properties": {
-      }
+      "Type": "AWS::IAM::Group"
+    },
+    "AwsMfaAssumeAnyRoleGroup": {
+      "Type": "AWS::IAM::Group"
     },
     "AwsMfaPowerUsersGroup": {
-      "Type": "AWS::IAM::Group",
-      "Properties": {
-      }
+      "Type": "AWS::IAM::Group"
     }
   }
 }
