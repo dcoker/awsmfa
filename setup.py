@@ -28,8 +28,8 @@ setup(
         'Environment :: Console',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: Apache Software License',
+        'Programming Language :: Python :: 3 :: Only',
         'Topic :: Security',
-        'Programming Language :: Python',
     ],
     zip_safe=False,
     install_requires=[
