@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "IAM Policies for use with awsmfa.",
+  "Description": "Defines IAM Policies and Groups for use with awsmfa. See Output for details.",
   "Metadata": {
     "Setup": [
       "Create with: ",
@@ -8,16 +8,22 @@
     ]
   },
   "Resources": {
-    "AwsMfaMinimumPolicies": {
+    "AwsMfaMinimumPolicy": {
       "Type": "AWS::IAM::Policy",
       "Properties": {
-        "PolicyName": "AwsMfaMinimumPolicies",
+        "PolicyName": "AwsMfaMinimumPolicy",
         "Groups": [
           {
             "Ref": "AwsMfaUsersGroup"
           },
           {
-            "Ref": "AwsMfaAssumeAnyRoleGroup"
+            "Ref": "AwsMfaAllowAssumeAllRolesGroup"
+          },
+          {
+            "Ref": "AwsMfaPowerUsersGroup"
+          },
+          {
+            "Ref": "AwsMfaAdministratorsGroup"
           }
         ],
         "PolicyDocument": {
@@ -129,13 +135,13 @@
         }
       }
     },
-    "AwsMfaAllowAssumeAllRoles": {
+    "AwsMfaAllowAssumeAllRolesPolicy": {
       "Type": "AWS::IAM::Policy",
       "Properties": {
-        "PolicyName": "AwsMfaAllowAssumeAllRoles",
+        "PolicyName": "AwsMfaAllowAssumeAllRolesPolicy",
         "Groups": [
           {
-            "Ref": "AwsMfaAssumeAnyRoleGroup"
+            "Ref": "AwsMfaAllowAssumeAllRolesGroup"
           }
         ],
         "PolicyDocument": {
@@ -171,10 +177,10 @@
         }
       }
     },
-    "AwsMfaPowerUsersRole": {
+    "AwsMfaPowerUsersPolicy": {
       "Type": "AWS::IAM::Policy",
       "Properties": {
-        "PolicyName": "AwsMfaPowerUsersRole",
+        "PolicyName": "AwsMfaPowerUsersPolicy",
         "Groups": [
           {
             "Ref": "AwsMfaPowerUsersGroup"
@@ -202,14 +208,74 @@
         }
       }
     },
+    "AwsMfaAdministratorsPolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "AwsMfaAdministratorsPolicy",
+        "Groups": [
+          {
+            "Ref": "AwsMfaAdministratorsGroup"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "AllowEverything",
+              "Effect": "Allow",
+              "Action": [
+                "*"
+              ],
+              "Resource": [
+                "*"
+              ],
+              "Condition": {
+                "Bool": {
+                  "aws:MultiFactorAuthPresent": "true"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
     "AwsMfaUsersGroup": {
       "Type": "AWS::IAM::Group"
     },
-    "AwsMfaAssumeAnyRoleGroup": {
+    "AwsMfaAllowAssumeAllRolesGroup": {
       "Type": "AWS::IAM::Group"
     },
     "AwsMfaPowerUsersGroup": {
       "Type": "AWS::IAM::Group"
+    },
+    "AwsMfaAdministratorsGroup": {
+      "Type": "AWS::IAM::Group"
+    }
+  },
+  "Outputs": {
+    "AwsMfaUsersGroupName": {
+      "Value": {
+        "Ref": "AwsMfaUsersGroup"
+      },
+      "Description": "Users in this group have the bare minimum privileges necessary to use awsmfa."
+    },
+    "AwsMfaAllowAssumeAllRolesGroupName": {
+      "Value": {
+        "Ref": "AwsMfaAllowAssumeAllRolesGroup"
+      },
+      "Description": "Users in this group can assume any role after acquiring temporary credentials with awsmfa"
+    },
+    "AwsMfaPowerUsersGroupName": {
+      "Value": {
+        "Ref": "AwsMfaPowerUsersGroup"
+      },
+      "Description": "Users in this group can perform any action on any resource after acquiring temporary credentials with awsmfa, except IAM operations. This mirrors the AWS default PowerUserAccess policy."
+    },
+    "AwsMfaAdministratorsGroupName": {
+      "Value": {
+        "Ref": "AwsMfaAdministratorsGroup"
+      },
+      "Description": "Users in this group can perform any action on any resource after acquiring temporary credentials with awsmfa. This mirrors the AWS default AdministratorAccess policy."
     }
   }
 }
