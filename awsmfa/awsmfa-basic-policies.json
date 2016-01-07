@@ -263,7 +263,7 @@
       "Value": {
         "Ref": "AwsMfaAllowAssumeAllRolesGroup"
       },
-      "Description": "Users in this group can assume any role after acquiring temporary credentials with awsmfa"
+      "Description": "Users in this group can assume any role after acquiring temporary credentials with awsmfa."
     },
     "AwsMfaPowerUsersGroupName": {
       "Value": {
