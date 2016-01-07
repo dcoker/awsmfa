@@ -55,7 +55,9 @@ def main(args=None):
                                                'identity'),
                         help='Name of the section in the credentials file '
                              'representing your long-lived credentials. '
-                             'Values in this section will be copied to the '
+                             'All values in this section '
+                             '(including custom parameters such as "region" '
+                             'or "s3") will be copied to the '
                              '--target-profile, with the access key, secret '
                              'key, and session key replaced by the temporary '
                              'credentials. If the AWS_MFA_IDENTITY_PROFILE '
@@ -68,7 +70,8 @@ def main(args=None):
                              'AWS_MFA_SERIAL_NUMBER environment variable or '
                              'queried from IAM automatically. For automatic '
                              'detection to work, your identity profile must '
-                             'be permitted to call "aws iam get-user".')
+                             'have IAM policies that allow "aws iam '
+                             'get-user" and "aws iam list-mfa-devices".')
     parser.add_argument('--target-profile',
                         default=os.environ.get('AWS_MFA_TARGET_PROFILE',
                                                'default'),
