@@ -18,14 +18,16 @@ scenarios where this tool is useful:
    assumption for specific job/role functions, and the IAM policies for AssumeRole require
    aws:MultiFactorAuthPresent.
 
-By default, the long-lived credentials (access key and secret key) are expected in a
-profile called `[identity]` and the temporary credentials (access key, secret key, session token)
-are stored in `[default]`. These are configurable with the --identity-profile and
---target-profile flags, respectively.
+By default, the long-lived credentials (access key and secret key) are expected
+in a profile called ``[identity]`` and the temporary credentials (access key,
+secret key, session token) are stored in ``[default]``. These are
+configurable with the ``--identity-profile`` and ``--target-profile`` flags,
+respectively.
 
-The MFA token can be passed on the command line with `--token-code` or entered interactively.
+The MFA token can be passed on the command line with ``--token-code`` or
+entered interactively.
 
-Run `awsmfa -h` for additional information.
+Run ``awsmfa -h`` for additional information.
 
 Getting started:
 
@@ -44,7 +46,9 @@ Getting started:
 
 
 Example w/role assumption:
+
 ::
 
     $ awsmfa arn:aws:iam::123456789012:role/s3access
+
 
