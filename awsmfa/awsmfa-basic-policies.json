@@ -4,7 +4,7 @@
   "Metadata": {
     "Setup": [
       "Create with: ",
-      "aws cloudformation create-stack --stack-name awsmfa --template-body file://./awsmfa-policies.json --capabilities CAPABILITY_IAM"
+      "aws cloudformation create-stack --stack-name awsmfa --template-body file://./awsmfa-basic-policies.json --capabilities CAPABILITY_IAM"
     ]
   },
   "Resources": {
