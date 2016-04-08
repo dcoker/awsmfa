@@ -33,7 +33,8 @@ setup(
     ],
     zip_safe=False,
     install_requires=[
-        'botocore>=1.3'
+        'botocore>=1.4.0',
+        'boto3>=1.3.0'
     ],
     entry_points={
         'console_scripts': [
