@@ -116,3 +116,5 @@ com_crashlytics_export_strings.xml
 crashlytics.properties
 crashlytics-build.properties
 
+# pex executables (https://pypi.python.org/pypi/pex)
+*.pex
