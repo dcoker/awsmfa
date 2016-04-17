@@ -25,6 +25,11 @@ def main(args=None):
         print(VERSION)
         return OK
 
+    if not os.path.exists(args.aws_credentials):
+        print("%s does not exist. Please run 'aws configure' or specify an alternate credentials file with "
+              "--aws-credentials." % args.aws_credentials, file=sys.stderr)
+        return USER_RECOVERABLE_ERROR
+
     credentials = configparser.ConfigParser(default_section=None)
     credentials.read(args.aws_credentials)
 
