@@ -1,3 +1,5 @@
+.. image:: https://img.shields.io/pypi/v/awsmfa.svg?maxAge=600   :target: 
+
 awsmfa
 ======
 
