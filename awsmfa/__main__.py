@@ -90,11 +90,15 @@ def main(args=None):
             return USER_RECOVERABLE_ERROR
         else:
             raise
-    remaining = response['Credentials']['Expiration'] - datetime.datetime.now(
-        tz=datetime.timezone.utc)
-    print("Temporary credentials will expire in %s." % remaining)
+    print_expiration_time(response['Credentials']['Expiration'])
     update_credentials_file(args, credentials, response['Credentials'])
     return OK
+
+
+def print_expiration_time(aws_expiration):
+    remaining = aws_expiration - datetime.datetime.now(
+        tz=pytz.utc)
+    print("Temporary credentials will expire in %s." % remaining)
 
 
 def parse_args(args):
