@@ -2,16 +2,19 @@
 from __future__ import print_function
 
 import argparse
-import configparser
 import datetime
 import getpass
 import sys
+
+# noinspection PyUnresolvedReferences
+from six.moves import configparser
 
 import boto3.session
 import botocore
 import botocore.exceptions
 import botocore.session
 import os
+from six import PY2
 from ._version import VERSION
 
 SIX_HOURS_IN_SECONDS = 21600
@@ -31,7 +34,10 @@ def main(args=None):
               "--aws-credentials." % args.aws_credentials, file=sys.stderr)
         return USER_RECOVERABLE_ERROR
 
-    credentials = configparser.ConfigParser(default_section=None)
+    if PY2:
+        credentials = configparser.ConfigParser()
+    else:
+        credentials = configparser.ConfigParser(default_section=None)
     credentials.read(args.aws_credentials)
 
     session = botocore.session.Session(profile=args.identity_profile)
@@ -42,6 +48,17 @@ def main(args=None):
         print("Available profiles: %s" %
               ", ".join(sorted(session.available_profiles)))
         return USER_RECOVERABLE_ERROR
+
+    if "AWSMFA_TESTING_MODE" in os.environ:
+        print("Skipping AWS API calls because AWSMFA_TESTING_MODE is set.")
+        fake_credentials = {
+            'AccessKeyId': credentials.get(args.identity_profile, 'aws_access_key_id'),
+            'SecretAccessKey': credentials.get(args.identity_profile, 'aws_secret_access_key'),
+            'SessionToken': datetime.datetime.utcnow().isoformat(),
+            'Expiration': datetime.datetime.utcnow(),
+        }
+        update_credentials_file(args, credentials, fake_credentials)
+        return OK
 
     serial_number = find_mfa_for_user(args.serial_number, session, session3)
     if not serial_number:
@@ -194,7 +211,11 @@ def find_mfa_for_user(user_specified_serial, botocore_session, boto3_session):
 
 def update_credentials_file(args, credentials, temporary_credentials):
     credentials.remove_section(args.target_profile)
-    credentials.add_section(args.target_profile)
+    # Hack: Python 2's implementation of ConfigParser rejects new sections named 'default'
+    if PY2 and args.target_profile == 'default':
+        credentials._sections[args.target_profile] = configparser._default_dict()
+    else:
+        credentials.add_section(args.target_profile)
     for k, v in credentials.items(args.identity_profile):
         credentials.set(args.target_profile, k, v)
     credentials.set(args.target_profile, 'aws_access_key_id',
