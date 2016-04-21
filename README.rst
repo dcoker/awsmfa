@@ -1,4 +1,4 @@
-.. image:: https://img.shields.io/pypi/v/awsmfa.svg?maxAge=600   :target: 
+.. image:: https://img.shields.io/pypi/v/awsmfa.svg?maxAge=600   :target:
 
 awsmfa
 ======
@@ -35,7 +35,7 @@ Getting started:
 
 ::
 
-    $ pip3 install --user awsmfa
+    $ pip install --user awsmfa
     ...
     $ aws configure --profile identity
     ... specify your long-lived credentials
