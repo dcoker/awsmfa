@@ -14,6 +14,7 @@ import botocore
 import botocore.exceptions
 import botocore.session
 import os
+import pytz
 from six import PY2
 from ._version import VERSION
 
@@ -50,13 +51,21 @@ def main(args=None):
         return USER_RECOVERABLE_ERROR
 
     if "AWSMFA_TESTING_MODE" in os.environ:
-        print("Skipping AWS API calls because AWSMFA_TESTING_MODE is set.")
+        print("Skipping AWS API calls because AWSMFA_TESTING_MODE is set.",
+              file=sys.stderr)
+        # AWS returns offset-aware UTC times, so we fake that in order to
+        # verify consistent code paths between py2 and py3 datetime.
+        fake_expiration = datetime.datetime.now(tz=pytz.utc) + \
+                          datetime.timedelta(minutes=5)
         fake_credentials = {
-            'AccessKeyId': credentials.get(args.identity_profile, 'aws_access_key_id'),
-            'SecretAccessKey': credentials.get(args.identity_profile, 'aws_secret_access_key'),
-            'SessionToken': datetime.datetime.utcnow().isoformat(),
-            'Expiration': datetime.datetime.utcnow(),
+            'AccessKeyId': credentials.get(args.identity_profile,
+                                           'aws_access_key_id'),
+            'SecretAccessKey': credentials.get(args.identity_profile,
+                                               'aws_secret_access_key'),
+            'SessionToken': "420",
+            'Expiration': fake_expiration,
         }
+        print_expiration_time(fake_expiration)
         update_credentials_file(args, credentials, fake_credentials)
         return OK
 
@@ -215,8 +224,10 @@ def find_mfa_for_user(user_specified_serial, botocore_session, boto3_session):
 
 def update_credentials_file(args, credentials, temporary_credentials):
     credentials.remove_section(args.target_profile)
-    # Hack: Python 2's implementation of ConfigParser rejects new sections named 'default'
+    # Hack: Python 2's implementation of ConfigParser rejects new sections named
+    # 'default'
     if PY2 and args.target_profile == 'default':
+        # noinspection PyProtectedMember
         credentials._sections[args.target_profile] = configparser._default_dict()
     else:
         credentials.add_section(args.target_profile)
