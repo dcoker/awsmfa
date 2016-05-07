@@ -97,6 +97,35 @@
               }
             },
             {
+              "Sid": "AllowUsersToRotateTheirAccessKeys",
+              "Effect": "Allow",
+              "Action": [
+                "iam:ListAccessKeys",
+                "iam:CreateAccessKey",
+                "iam:UpdateAccessKey",
+                "iam:DeleteAccessKey"
+              ],
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:aws:iam::",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":user/${aws:username}"
+                    ]
+                  ]
+                }
+              ],
+              "Condition": {
+                "Bool": {
+                  "aws:MultiFactorAuthPresent": "true"
+                }
+              }
+            },
+            {
               "Sid": "AllowUsersToCreateEnableResyncTheirOwnVirtualMFADevice",
               "Effect": "Allow",
               "Action": [
