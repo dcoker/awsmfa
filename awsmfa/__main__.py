@@ -41,14 +41,15 @@ def main(args=None):
         credentials = configparser.ConfigParser(default_section=None)
     credentials.read(args.aws_credentials)
 
-    session = botocore.session.Session(profile=args.identity_profile)
-    try:
-        session3 = boto3.session.Session(botocore_session=session)
-    except botocore.exceptions.ProfileNotFound as err:
-        print(str(err), file=sys.stderr)
-        print("Available profiles: %s" %
-              ", ".join(sorted(session.available_profiles)))
-        return USER_RECOVERABLE_ERROR
+    status = one_mfa(args, credentials)
+    if status != OK:
+        return status
+    if args.rotate_identity_keys:
+        return rotate(args, credentials)
+
+
+def one_mfa(args, credentials):
+    session, session3 = make_session(args.identity_profile)
 
     if "AWSMFA_TESTING_MODE" in os.environ:
         print("Skipping AWS API calls because AWSMFA_TESTING_MODE is set.",
@@ -66,7 +67,8 @@ def main(args=None):
             'Expiration': fake_expiration,
         }
         print_expiration_time(fake_expiration)
-        update_credentials_file(args, credentials, fake_credentials)
+        update_credentials_file(args.aws_credentials, args.target_profile, args.identity_profile, credentials,
+                                fake_credentials)
         return OK
 
     serial_number = find_mfa_for_user(args.serial_number, session, session3)
@@ -100,14 +102,52 @@ def main(args=None):
         else:
             raise
     print_expiration_time(response['Credentials']['Expiration'])
-    update_credentials_file(args, credentials, response['Credentials'])
+    update_credentials_file(args.aws_credentials, args.target_profile, args.identity_profile, credentials,
+                            response['Credentials'])
     return OK
+
+
+def make_session(identity_profile):
+    session = botocore.session.Session(profile=identity_profile)
+    try:
+        session3 = boto3.session.Session(botocore_session=session)
+    except botocore.exceptions.ProfileNotFound as err:
+        print(str(err), file=sys.stderr)
+        print("Available profiles: %s" %
+              ", ".join(sorted(session.available_profiles)))
+        return USER_RECOVERABLE_ERROR
+    return session, session3
 
 
 def print_expiration_time(aws_expiration):
     remaining = aws_expiration - datetime.datetime.now(
         tz=pytz.utc)
     print("Temporary credentials will expire in %s." % remaining)
+
+
+def rotate(args, credentials):
+    """rotate the identity profile's AWS access key pair."""
+    current_access_key_id = credentials.get(args.identity_profile, 'aws_access_key_id')
+
+    # create new sessions using the MFA credentials
+    session, session3 = make_session(args.target_profile)
+    iam = session3.resource('iam')
+
+    # find the AccessKey corresponding to the identity profile and delete it.
+    current_access_key = next((key for key in iam.CurrentUser().access_keys.all()
+                               if key.access_key_id == current_access_key_id), None)
+    current_access_key.delete()
+
+    # create the new access key pair
+    iam_service = session3.client('iam')
+    new_access_key_pair = iam_service.create_access_key()["AccessKey"]
+
+    print("Rotating from %s to %s." % (current_access_key.access_key_id, new_access_key_pair['AccessKeyId']))
+    update_credentials_file(args.aws_credentials, args.identity_profile, args.identity_profile, credentials,
+                            new_access_key_pair)
+    print("%s profile updated." % args.identity_profile)
+
+    return OK
 
 
 def parse_args(args):
@@ -188,8 +228,26 @@ def parse_args(args):
                              'device. If the AWS_MFA_TOKEN_CODE environment '
                              'variable is set, it will be used as the default '
                              'value.')
+    parser.add_argument('--rotate-identity-keys',
+                        default=safe_bool(os.environ.get('AWS_MFA_ROTATE_IDENTITY_KEYS', False)),
+                        action='store_true',
+                        help='Rotate the identity profile access keys '
+                             'immediately upon successful acquisition of '
+                             'temporary credentials. This deletes your '
+                             'identity profile access keys from the '
+                             '--aws-credentials file and from AWS using the '
+                             'IAM DeleteAccessKey API, and then writes a new '
+                             'identity access key pair using the results of '
+                             'IAM CreateAccessKey. If the '
+                             'AWS_MFA_ROTATE_IDENTITY_KEYS environment '
+                             'variable is set to True, this behavior is '
+                             'enabled by default.')
     args = parser.parse_args(args)
     return args
+
+
+def safe_bool(s):
+    return str(s).lower() == "true"
 
 
 def find_mfa_for_user(user_specified_serial, botocore_session, boto3_session):
@@ -222,29 +280,37 @@ def find_mfa_for_user(user_specified_serial, botocore_session, boto3_session):
     return serials[0]
 
 
-def update_credentials_file(args, credentials, temporary_credentials):
-    credentials.remove_section(args.target_profile)
-    # Hack: Python 2's implementation of ConfigParser rejects new sections named
-    # 'default'
-    if PY2 and args.target_profile == 'default':
-        # noinspection PyProtectedMember
-        credentials._sections[args.target_profile] = configparser._default_dict()
+def update_credentials_file(filename, target_profile, source_profile, credentials, new_access_key):
+    if target_profile != source_profile:
+        credentials.remove_section(target_profile)
+        # Hack: Python 2's implementation of ConfigParser rejects new sections named
+        # 'default'
+        if PY2 and target_profile == 'default':
+            # noinspection PyProtectedMember
+            credentials._sections[target_profile] = configparser._default_dict()
+        else:
+            credentials.add_section(target_profile)
+
+        for k, v in credentials.items(source_profile):
+            credentials.set(target_profile, k, v)
+
+    credentials.set(target_profile, 'aws_access_key_id',
+                    new_access_key['AccessKeyId'])
+    credentials.set(target_profile, 'aws_secret_access_key',
+                    new_access_key['SecretAccessKey'])
+    if 'SessionToken' in new_access_key:
+        credentials.set(target_profile, 'aws_session_token',
+                        new_access_key['SessionToken'])
+        credentials.set(target_profile, 'awsmfa_expiration',
+                        new_access_key['Expiration'].isoformat())
     else:
-        credentials.add_section(args.target_profile)
-    for k, v in credentials.items(args.identity_profile):
-        credentials.set(args.target_profile, k, v)
-    credentials.set(args.target_profile, 'aws_access_key_id',
-                    temporary_credentials['AccessKeyId'])
-    credentials.set(args.target_profile, 'aws_secret_access_key',
-                    temporary_credentials['SecretAccessKey'])
-    credentials.set(args.target_profile, 'aws_session_token',
-                    temporary_credentials['SessionToken'])
-    credentials.set(args.target_profile, 'awsmfa_expiration',
-                    temporary_credentials['Expiration'].isoformat())
-    temp_credentials_file = args.aws_credentials + ".tmp"
+        credentials.remove_option(target_profile, 'aws_session_token')
+        credentials.remove_option(target_profile, 'awsmfa_expiration')
+
+    temp_credentials_file = filename + ".tmp"
     with open(temp_credentials_file, "w") as out:
         credentials.write(out)
-    os.rename(temp_credentials_file, args.aws_credentials)
+    os.rename(temp_credentials_file, filename)
 
 
 if __name__ == '__main__':
