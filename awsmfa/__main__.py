@@ -31,8 +31,9 @@ def main(args=None):
         return OK
 
     if not os.path.exists(args.aws_credentials):
-        print("%s does not exist. Please run 'aws configure' or specify an alternate credentials file with "
-              "--aws-credentials." % args.aws_credentials, file=sys.stderr)
+        print("%s does not exist. Please run 'aws configure' or specify an "
+              "alternate credentials file with --aws-credentials."
+              % args.aws_credentials, file=sys.stderr)
         return USER_RECOVERABLE_ERROR
 
     if PY2:
@@ -46,6 +47,7 @@ def main(args=None):
         return status
     if args.rotate_identity_keys:
         return rotate(args, credentials)
+    return OK
 
 
 def one_mfa(args, credentials):
@@ -56,8 +58,8 @@ def one_mfa(args, credentials):
               file=sys.stderr)
         # AWS returns offset-aware UTC times, so we fake that in order to
         # verify consistent code paths between py2 and py3 datetime.
-        fake_expiration = datetime.datetime.now(tz=pytz.utc) + \
-                          datetime.timedelta(minutes=5)
+        fake_expiration = (datetime.datetime.now(tz=pytz.utc) +
+                           datetime.timedelta(minutes=5))
         fake_credentials = {
             'AccessKeyId': credentials.get(args.identity_profile,
                                            'aws_access_key_id'),
@@ -67,7 +69,10 @@ def one_mfa(args, credentials):
             'Expiration': fake_expiration,
         }
         print_expiration_time(fake_expiration)
-        update_credentials_file(args.aws_credentials, args.target_profile, args.identity_profile, credentials,
+        update_credentials_file(args.aws_credentials,
+                                args.target_profile,
+                                args.identity_profile,
+                                credentials,
                                 fake_credentials)
         return OK
 
@@ -102,7 +107,10 @@ def one_mfa(args, credentials):
         else:
             raise
     print_expiration_time(response['Credentials']['Expiration'])
-    update_credentials_file(args.aws_credentials, args.target_profile, args.identity_profile, credentials,
+    update_credentials_file(args.aws_credentials,
+                            args.target_profile,
+                            args.identity_profile,
+                            credentials,
                             response['Credentials'])
     return OK
 
@@ -127,23 +135,30 @@ def print_expiration_time(aws_expiration):
 
 def rotate(args, credentials):
     """rotate the identity profile's AWS access key pair."""
-    current_access_key_id = credentials.get(args.identity_profile, 'aws_access_key_id')
+    current_access_key_id = credentials.get(
+        args.identity_profile, 'aws_access_key_id')
 
     # create new sessions using the MFA credentials
     session, session3 = make_session(args.target_profile)
     iam = session3.resource('iam')
 
     # find the AccessKey corresponding to the identity profile and delete it.
-    current_access_key = next((key for key in iam.CurrentUser().access_keys.all()
-                               if key.access_key_id == current_access_key_id), None)
+    current_access_key = next((key for key
+                               in iam.CurrentUser().access_keys.all()
+                               if key.access_key_id == current_access_key_id),
+                              None)
     current_access_key.delete()
 
     # create the new access key pair
     iam_service = session3.client('iam')
     new_access_key_pair = iam_service.create_access_key()["AccessKey"]
 
-    print("Rotating from %s to %s." % (current_access_key.access_key_id, new_access_key_pair['AccessKeyId']))
-    update_credentials_file(args.aws_credentials, args.identity_profile, args.identity_profile, credentials,
+    print("Rotating from %s to %s." % (current_access_key.access_key_id,
+                                       new_access_key_pair['AccessKeyId']))
+    update_credentials_file(args.aws_credentials,
+                            args.identity_profile,
+                            args.identity_profile,
+                            credentials,
                             new_access_key_pair)
     print("%s profile updated." % args.identity_profile)
 
@@ -229,7 +244,8 @@ def parse_args(args):
                              'variable is set, it will be used as the default '
                              'value.')
     parser.add_argument('--rotate-identity-keys',
-                        default=safe_bool(os.environ.get('AWS_MFA_ROTATE_IDENTITY_KEYS', False)),
+                        default=safe_bool(os.environ.get(
+                            'AWS_MFA_ROTATE_IDENTITY_KEYS', False)),
                         action='store_true',
                         help='Rotate the identity profile access keys '
                              'immediately upon successful acquisition of '
@@ -280,14 +296,16 @@ def find_mfa_for_user(user_specified_serial, botocore_session, boto3_session):
     return serials[0]
 
 
-def update_credentials_file(filename, target_profile, source_profile, credentials, new_access_key):
+def update_credentials_file(filename, target_profile, source_profile,
+                            credentials, new_access_key):
     if target_profile != source_profile:
         credentials.remove_section(target_profile)
-        # Hack: Python 2's implementation of ConfigParser rejects new sections named
-        # 'default'
+        # Hack: Python 2's implementation of ConfigParser rejects new sections
+        # named 'default'.
         if PY2 and target_profile == 'default':
             # noinspection PyProtectedMember
-            credentials._sections[target_profile] = configparser._default_dict()
+            credentials._sections[
+                target_profile] = configparser._default_dict()
         else:
             credentials.add_section(target_profile)
 
