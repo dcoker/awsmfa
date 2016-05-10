@@ -1,8 +1,8 @@
-.. image:: https://img.shields.io/pypi/v/awsmfa.svg?maxAge=600   :target:
-
 ======
 awsmfa
 ======
+
+.. image:: https://img.shields.io/pypi/v/awsmfa.svg?maxAge=600   :target:
 
 awsmfa helps AWS users use two factor authentication (MFA) with their
 ``~/.aws/credentials`` file. awsmfa also makes it easy to rotate your
@@ -15,6 +15,7 @@ keys sitting on developer machines. If you are looking for an easy way
 to improve your team's security, this might be a good starting
 point for you.
 
+--------------------------
 When do I want to use MFA?
 --------------------------
 
@@ -58,6 +59,7 @@ You can read more about using MFA with AWS Policies in the
 `AWS documentation <http://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_mfa_configure-api-require
 .html#MFAProtectedAPI-user-mfa>`_.
 
+--------
 Policies
 --------
 
@@ -71,6 +73,7 @@ and as a starting point for more customized policies. You can install these
 policies using the CloudFormation Console or using the command line examples from
 the template.
 
+---------------
 Getting Started
 ---------------
 
@@ -122,7 +125,7 @@ details.
                   [role-to-assume]
     ...
 
-
+---------------
 Role Assumption
 ---------------
 
@@ -132,10 +135,11 @@ first parameter to awsmfa. Example::
 
     $ awsmfa arn:aws:iam::123456789012:role/s3access
 
-You can also customize the role session name:
+You can also customize the role session name::
 
     $ awsmfa --role-session-name ingest arn:aws:iam::123456789012:role/s3access
 
+------------
 Key Rotation
 ------------
 
