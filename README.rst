@@ -186,7 +186,7 @@ and ``AWS_SESSION_TOKEN``). ``awsmfa --env`` will print shell commands to define
     AWS_SESSION_TOKEN=FQoDY...; export AWS_SESSION_TOKEN;
 
 The prompt and expiration notice are written to stderr, and the environment variables are written to stdout, so
-you can also `eval` the output:
+you can also `eval` the output::
 
     $ eval $(awsmfa --env)
     Enter MFA Code: 123456
