@@ -54,52 +54,28 @@ def one_mfa(args, credentials):
     session, session3 = make_session(args.identity_profile)
 
     if "AWSMFA_TESTING_MODE" in os.environ:
-        print("Skipping AWS API calls because AWSMFA_TESTING_MODE is set.",
-              file=sys.stderr)
-        # AWS returns offset-aware UTC times, so we fake that in order to
-        # verify consistent code paths between py2 and py3 datetime.
-        fake_expiration = (datetime.datetime.now(tz=pytz.utc) +
-                           datetime.timedelta(minutes=5))
-        fake_credentials = {
-            'AccessKeyId': credentials.get(args.identity_profile,
-                                           'aws_access_key_id'),
-            'SecretAccessKey': credentials.get(args.identity_profile,
-                                               'aws_secret_access_key'),
-            'SessionToken': "420",
-            'Expiration': fake_expiration,
-        }
-        print_expiration_time(fake_expiration)
-        update_credentials_file(args.aws_credentials,
-                                args.target_profile,
-                                args.identity_profile,
-                                credentials,
-                                fake_credentials)
+        use_testing_credentials(args, credentials)
         return OK
 
-    serial_number = find_mfa_for_user(args.serial_number, session, session3)
-    if not serial_number:
-        print("There are no MFA devices associated with this user.",
-              file=sys.stderr)
-        return USER_RECOVERABLE_ERROR
-
-    if args.token_code is None:
-        while args.token_code is None or len(args.token_code) != 6:
-            args.token_code = getpass.getpass("MFA Token Code: ")
+    mfa_args = {}
+    if args.token_code != 'skip':
+        serial_number, token_code, err = acquire_code(args, session, session3)
+        if err is not OK:
+            return err
+        mfa_args['SerialNumber'] = serial_number
+        mfa_args['TokenCode'] = token_code
 
     sts = session3.client('sts')
     try:
         if args.role_to_assume:
-            response = sts.assume_role(
+            mfa_args.update(
                 DurationSeconds=min(args.duration, 3600),
                 RoleArn=args.role_to_assume,
-                RoleSessionName=args.role_session_name,
-                SerialNumber=serial_number,
-                TokenCode=args.token_code)
+                RoleSessionName=args.role_session_name)
+            response = sts.assume_role(**mfa_args)
         else:
-            response = sts.get_session_token(
-                DurationSeconds=args.duration,
-                SerialNumber=serial_number,
-                TokenCode=args.token_code)
+            mfa_args.update(DurationSeconds=args.duration)
+            response = sts.get_session_token(**mfa_args)
     except botocore.exceptions.ClientError as err:
         if err.response["Error"]["Code"] == "AccessDenied":
             print(str(err), file=sys.stderr)
@@ -115,6 +91,29 @@ def one_mfa(args, credentials):
     return OK
 
 
+def use_testing_credentials(args, credentials):
+    print("Skipping AWS API calls because AWSMFA_TESTING_MODE is set.",
+          file=sys.stderr)
+    # AWS returns offset-aware UTC times, so we fake that in order to
+    # verify consistent code paths between py2 and py3 datetime.
+    fake_expiration = (datetime.datetime.now(tz=pytz.utc) +
+                       datetime.timedelta(minutes=5))
+    fake_credentials = {
+        'AccessKeyId': credentials.get(args.identity_profile,
+                                       'aws_access_key_id'),
+        'SecretAccessKey': credentials.get(args.identity_profile,
+                                           'aws_secret_access_key'),
+        'SessionToken': "420",
+        'Expiration': fake_expiration,
+    }
+    print_expiration_time(fake_expiration)
+    update_credentials_file(args.aws_credentials,
+                            args.target_profile,
+                            args.identity_profile,
+                            credentials,
+                            fake_credentials)
+
+
 def make_session(identity_profile):
     session = botocore.session.Session(profile=identity_profile)
     try:
@@ -125,6 +124,22 @@ def make_session(identity_profile):
               ", ".join(sorted(session.available_profiles)))
         return USER_RECOVERABLE_ERROR
     return session, session3
+
+
+def acquire_code(args, session, session3):
+    """returns the user's token serial number, MFA token code, and an
+    error code."""
+    serial_number = find_mfa_for_user(args.serial_number, session, session3)
+    if not serial_number:
+        print("There are no MFA devices associated with this user.",
+              file=sys.stderr)
+        return None, None, USER_RECOVERABLE_ERROR
+
+    token_code = args.token_code
+    if token_code is None:
+        while token_code is None or len(token_code) != 6:
+            token_code = getpass.getpass("MFA Token Code: ")
+    return serial_number, token_code, OK
 
 
 def print_expiration_time(aws_expiration):
@@ -240,9 +255,12 @@ def parse_args(args):
     parser.add_argument('-c', '--token-code',
                         default=os.environ.get('AWS_MFA_TOKEN_CODE'),
                         help='The 6 digit numeric MFA code generated by your '
-                             'device. If the AWS_MFA_TOKEN_CODE environment '
-                             'variable is set, it will be used as the default '
-                             'value.')
+                             'device, or "skip". If the AWS_MFA_TOKEN_CODE '
+                             'environment variable is set, it will be used as '
+                             'the default value. If this is \"skip\", '
+                             'temporary credentials will still be acquired '
+                             'but they will not satisfy the '
+                             'sts:MultiFactorAuthPresent condition.')
     parser.add_argument('--rotate-identity-keys',
                         default=safe_bool(os.environ.get(
                             'AWS_MFA_ROTATE_IDENTITY_KEYS', False)),
