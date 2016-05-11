@@ -16,6 +16,7 @@ import botocore.session
 import os
 import pytz
 from six import PY2
+from six.moves import shlex_quote
 from ._version import VERSION
 
 SIX_HOURS_IN_SECONDS = 21600
@@ -42,8 +43,27 @@ def main(args=None):
     if status != OK:
         return status
     if args.rotate_identity_keys:
-        return rotate(args, credentials)
+        status = rotate(args, credentials)
+        if status != OK:
+            return status
+    if args.env:
+        print_env_vars(credentials, args.target_profile)
     return OK
+
+
+def print_env_vars(credentials, target_profile):
+    aws_access_key_id = shlex_quote(credentials.get(
+        target_profile, 'aws_access_key_id'))
+    aws_secret_access_key = shlex_quote(credentials.get(
+        target_profile, 'aws_secret_access_key'))
+    aws_session_token = shlex_quote(credentials.get(
+        target_profile, 'aws_session_token'))
+    print("AWS_ACCESS_KEY_ID=%s; export AWS_ACCESS_KEY_ID;" %
+          shlex_quote(aws_access_key_id))
+    print("AWS_SECRET_ACCESS_KEY=%s; export AWS_SECRET_ACCESS_KEY;" %
+          shlex_quote(aws_secret_access_key))
+    print("AWS_SESSION_TOKEN=%s; export AWS_SESSION_TOKEN;" %
+          shlex_quote(aws_session_token))
 
 
 def one_mfa(args, credentials):
@@ -117,7 +137,7 @@ def make_session(identity_profile):
     except botocore.exceptions.ProfileNotFound as err:
         print(str(err), file=sys.stderr)
         print("Available profiles: %s" %
-              ", ".join(sorted(session.available_profiles)))
+              ", ".join(sorted(session.available_profiles)), file=sys.stderr)
         return USER_RECOVERABLE_ERROR
     return session, session3
 
@@ -141,7 +161,8 @@ def acquire_code(args, session, session3):
 def print_expiration_time(aws_expiration):
     remaining = aws_expiration - datetime.datetime.now(
         tz=pytz.utc)
-    print("Temporary credentials will expire in %s." % remaining)
+    print("Temporary credentials will expire in %s." % remaining,
+          file=sys.stderr)
 
 
 def rotate(args, credentials):
@@ -165,13 +186,14 @@ def rotate(args, credentials):
     new_access_key_pair = iam_service.create_access_key()["AccessKey"]
 
     print("Rotating from %s to %s." % (current_access_key.access_key_id,
-                                       new_access_key_pair['AccessKeyId']))
+                                       new_access_key_pair['AccessKeyId']),
+          file=sys.stderr)
     update_credentials_file(args.aws_credentials,
                             args.identity_profile,
                             args.identity_profile,
                             credentials,
                             new_access_key_pair)
-    print("%s profile updated." % args.identity_profile)
+    print("%s profile updated." % args.identity_profile, file=sys.stderr)
 
     return OK
 
@@ -272,6 +294,14 @@ def parse_args(args):
                              'AWS_MFA_ROTATE_IDENTITY_KEYS environment '
                              'variable is set to True, this behavior is '
                              'enabled by default.')
+    parser.add_argument('--env',
+                        default=safe_bool(os.environ.get(
+                            'AWS_MFA_ENV', False)),
+                        action='store_true',
+                        help='Print the AWS_ACCESS_KEY_ID, '
+                             'AWS_SECRET_ACCESS_KEY, and AWS_SESSION_TOKEN '
+                             'environment variables in a form suitable for '
+                             'evaluation in a shell.')
     args = parser.parse_args(args)
     return args
 
