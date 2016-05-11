@@ -26,10 +26,6 @@ USER_RECOVERABLE_ERROR = 1
 def main(args=None):
     args = parse_args(args)
 
-    if args.version:
-        print(VERSION)
-        return OK
-
     if not os.path.exists(args.aws_credentials):
         print("%s does not exist. Please run 'aws configure' or specify an "
               "alternate credentials file with --aws-credentials."
@@ -187,8 +183,8 @@ def parse_args(args):
         prog='awsmfa',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--version',
-                        default=False,
-                        action='store_true',
+                        action='version',
+                        version=VERSION,
                         help='Display version number and exit.')
     parser.add_argument('role_to_assume',
                         nargs='?',
