@@ -125,6 +125,19 @@ details.
                   [role-to-assume]
     ...
 
+------------
+Skipping MFA
+------------
+
+By default, awsmfa sends your MFA token code to AWS when acquiring temporary credentials. This is optional behavior.
+If you don't want to use MFA, pass ``-c skip`` or set the ``AWS_MFA_TOKEN_CODE`` environment variable to ``skip``.
+Example::
+
+    $ awsmfa -c skip
+
+Note that the temporary credentials obtained in this way will not satisfy the ``sts::MultiFactorAuthPresent`` condition
+variable.
+
 ---------------
 Role Assumption
 ---------------
@@ -157,3 +170,28 @@ If you want to rotate your identity keys every time you acquire temporary creden
 AWS_MFA_ROTATE_IDENTITY_KEYS environment variable. Example::
 
     $ echo AWS_MFA_ROTATE_IDENTITY_KEYS=True >> ~/.bashrc
+
+-----------------------------
+Setting Environment Variables
+-----------------------------
+
+Some AWS tools can only read credentials from environment variables (``AWS_ACCESS_KEY_ID``, ``AWS_SECRET_ACCESS_KEY``,
+and ``AWS_SESSION_TOKEN``). ``awsmfa --env`` will print shell commands to define those variables. Example::
+
+    $ awsmfa --env
+    Enter MFA Code: 123456
+    Temporary credentials will expire in 5:59:59.945582.
+    AWS_ACCESS_KEY_ID=ASIAIYM...; export AWS_ACCESS_KEY_ID;
+    AWS_SECRET_ACCESS_KEY=uyug...; export AWS_SECRET_ACCESS_KEY;
+    AWS_SESSION_TOKEN=FQoDY...; export AWS_SESSION_TOKEN;
+
+The prompt and expiration notice are written to stderr, and the environment variables are written to stdout, so
+you can also `eval` the output:
+
+    $ eval $(awsmfa --env)
+    Enter MFA Code: 123456
+    Temporary credentials will expire in 5:59:59.945582.
+    $ echo ${AWS_ACCESS_KEY_ID}
+    ASIA...
+
+Note that ``AWS_SESSION_TOKEN`` is not as widely supported as the other variables, so YMMV.
