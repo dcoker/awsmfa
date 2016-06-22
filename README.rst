@@ -184,6 +184,7 @@ and ``AWS_SESSION_TOKEN``). ``awsmfa --env`` will print shell commands to define
     AWS_ACCESS_KEY_ID=ASIAIYM...; export AWS_ACCESS_KEY_ID;
     AWS_SECRET_ACCESS_KEY=uyug...; export AWS_SECRET_ACCESS_KEY;
     AWS_SESSION_TOKEN=FQoDY...; export AWS_SESSION_TOKEN;
+    AWS_SECURITY_TOKEN=FQoDY...; export AWS_SECURITY_TOKEN;
 
 The prompt and expiration notice are written to stderr, and the environment variables are written to stdout, so
 you can also `eval` the output::
@@ -194,4 +195,5 @@ you can also `eval` the output::
     $ echo ${AWS_ACCESS_KEY_ID}
     ASIA...
 
-Note that ``AWS_SESSION_TOKEN`` is not as widely supported as the other variables, so YMMV.
+Note: both ``AWS_SESSION_TOKEN`` (the new standard name for the session token used in multiple SDKs) and
+``AWS_SECURITY_TOKEN`` (used by older versions of boto) are emitted for backwards compatibility.

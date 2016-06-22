@@ -64,6 +64,9 @@ def print_env_vars(credentials, target_profile):
           shlex_quote(aws_secret_access_key))
     print("AWS_SESSION_TOKEN=%s; export AWS_SESSION_TOKEN;" %
           shlex_quote(aws_session_token))
+    # for backwards compatibility with older Boto
+    print("AWS_SECURITY_TOKEN=%s; export AWS_SECURITY_TOKEN;" %
+          shlex_quote(aws_session_token))
 
 
 def one_mfa(args, credentials):
