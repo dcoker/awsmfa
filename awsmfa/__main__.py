@@ -375,7 +375,11 @@ def update_credentials_file(filename, target_profile, source_profile,
     temp_credentials_file = filename + ".tmp"
     with open(temp_credentials_file, "w") as out:
         credentials.write(out)
-    os.rename(temp_credentials_file, filename)
+    try:
+        os.rename(temp_credentials_file, filename)
+    except WindowsError as E:
+        os.remove(filename)
+        os.rename(temp_credentials_file, filename)
 
 
 if __name__ == '__main__':
