@@ -39,13 +39,13 @@ def main(args=None):
         credentials = configparser.ConfigParser(default_section=None)
     credentials.read(args.aws_credentials)
 
-    status = one_mfa(args, credentials)
-    if status != OK:
-        return status
+    err = one_mfa(args, credentials)
+    if err != OK:
+        return err
     if args.rotate_identity_keys:
-        status = rotate(args, credentials)
-        if status != OK:
-            return status
+        err = rotate(args, credentials)
+        if err != OK:
+            return err
     if args.env:
         print_env_vars(credentials, args.target_profile)
     return OK
@@ -70,7 +70,9 @@ def print_env_vars(credentials, target_profile):
 
 
 def one_mfa(args, credentials):
-    session, session3 = make_session(args.identity_profile)
+    session, session3, err = make_session(args.identity_profile)
+    if err:
+        return err
 
     if "AWSMFA_TESTING_MODE" in os.environ:
         use_testing_credentials(args, credentials)
@@ -139,10 +141,16 @@ def make_session(identity_profile):
         session3 = boto3.session.Session(botocore_session=session)
     except botocore.exceptions.ProfileNotFound as err:
         print(str(err), file=sys.stderr)
-        print("Available profiles: %s" %
-              ", ".join(sorted(session.available_profiles)), file=sys.stderr)
-        return USER_RECOVERABLE_ERROR
-    return session, session3
+        if session.available_profiles:
+            print("Available profiles: %s" %
+                  ", ".join(sorted(session.available_profiles)), file=sys.stderr)
+            print("You can specify a profile by passing it with the -i "
+                  "command line flag.", file=sys.stderr)
+        else:
+            print("You have no AWS profiles configured. Please run 'aws "
+                  "configure --profile identity' to get started.", file=sys.stderr)
+        return None, None, USER_RECOVERABLE_ERROR
+    return session, session3, None
 
 
 def acquire_code(args, session, session3):
@@ -174,14 +182,15 @@ def rotate(args, credentials):
         args.identity_profile, 'aws_access_key_id')
 
     # create new sessions using the MFA credentials
-    session, session3 = make_session(args.target_profile)
+    session, session3, err = make_session(args.target_profile)
+    if err:
+        return err
     iam = session3.resource('iam')
 
     # find the AccessKey corresponding to the identity profile and delete it.
     current_access_key = next((key for key
                                in iam.CurrentUser().access_keys.all()
-                               if key.access_key_id == current_access_key_id),
-                              None)
+                               if key.access_key_id == current_access_key_id))
     current_access_key.delete()
 
     # create the new access key pair
@@ -383,5 +392,4 @@ def update_credentials_file(filename, target_profile, source_profile,
 
 
 if __name__ == '__main__':
-    status = main()
-    sys.exit(status)
+    sys.exit(main())
