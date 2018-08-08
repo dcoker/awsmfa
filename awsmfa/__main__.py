@@ -20,6 +20,7 @@ from six.moves import shlex_quote
 from ._version import VERSION
 
 SIX_HOURS_IN_SECONDS = 21600
+TWELF_HOURS_IN_SECONDS = 43200
 OK = 0
 USER_RECOVERABLE_ERROR = 1
 
@@ -90,7 +91,7 @@ def one_mfa(args, credentials):
     try:
         if args.role_to_assume:
             mfa_args.update(
-                DurationSeconds=min(args.duration, 3600),
+                DurationSeconds=min(args.duration, TWELF_HOURS_IN_SECONDS),
                 RoleArn=args.role_to_assume,
                 RoleSessionName=args.role_session_name)
             response = sts.assume_role(**mfa_args)
