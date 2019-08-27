@@ -4,19 +4,19 @@ from __future__ import print_function
 import argparse
 import datetime
 import getpass
+import os
 import sys
-
-# noinspection PyUnresolvedReferences
-from six.moves import configparser
 
 import boto3.session
 import botocore
 import botocore.exceptions
 import botocore.session
-import os
 import pytz
 from six import PY2
+# noinspection PyUnresolvedReferences
+from six.moves import configparser
 from six.moves import shlex_quote
+
 from ._version import VERSION
 
 SIX_HOURS_IN_SECONDS = 21600
@@ -144,12 +144,14 @@ def make_session(identity_profile):
         print(str(err), file=sys.stderr)
         if session.available_profiles:
             print("Available profiles: %s" %
-                  ", ".join(sorted(session.available_profiles)), file=sys.stderr)
+                  ", ".join(sorted(session.available_profiles)),
+                  file=sys.stderr)
             print("You can specify a profile by passing it with the -i "
                   "command line flag.", file=sys.stderr)
         else:
             print("You have no AWS profiles configured. Please run 'aws "
-                  "configure --profile identity' to get started.", file=sys.stderr)
+                  "configure --profile identity' to get started.",
+                  file=sys.stderr)
         return None, None, USER_RECOVERABLE_ERROR
     return session, session3, None
 
@@ -234,9 +236,14 @@ def parse_args(args):
                              'variable is set, it will be used as the default '
                              'value.')
     parser.add_argument('--aws-credentials',
-                        default=os.path.join(os.path.expanduser('~'),
-                                             '.aws/credentials'),
-                        help='Full path to the ~/.aws/credentials file.')
+                        default=os.environ.get(
+                            'AWS_SHARED_CREDENTIALS_FILE',
+                            os.path.join(os.path.expanduser('~'),
+                                         '.aws/credentials')),
+                        help='Full path to the credentials file used by AWS '
+                             'CLI and SDKs. If the '
+                             'AWS_SHARED_CREDENTIALS_FILE environment variable '
+                             'is set, it will be used as the default value.')
     parser.add_argument('-d', '--duration',
                         type=int,
                         default=int(os.environ.get('AWS_MFA_DURATION',
