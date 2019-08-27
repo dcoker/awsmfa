@@ -194,10 +194,11 @@ def rotate(args, credentials):
     current_access_key = next((key for key
                                in iam.CurrentUser().access_keys.all()
                                if key.access_key_id == current_access_key_id))
-    current_access_key.delete()
 
-    # create the new access key pair
     iam_service = session3.client('iam')
+
+    # delete existing access key and create new one
+    iam_service.delete_access_key(AccessKeyId=current_access_key.access_key_id)
     new_access_key_pair = iam_service.create_access_key()["AccessKey"]
 
     print("Rotating from %s to %s." % (current_access_key.access_key_id,
