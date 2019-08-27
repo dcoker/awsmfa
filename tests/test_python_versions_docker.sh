@@ -15,7 +15,7 @@ python setup.py sdist -d "${DIST_DIR}"
 RELEASE=awsmfa-$(head -1 awsmfa/_version.py|cut -f4 -d\").tar.gz
 echo __ testing release "${RELEASE}"
 # Python.org (https://hub.docker.com/_/python/)
-IMAGES="python:2.7-alpine python:3.3-alpine python:3.4-alpine python:3.5-alpine"
+IMAGES="python:2.7-alpine python:3.4-alpine python:3.5-alpine python:3.6-alpine python:3.7-alpine"
 # PyPy (https://hub.docker.com/_/pypy/). Not including 3 due to an
 # incompatibility with the six module.
 IMAGES="${IMAGES} pypy:2"
