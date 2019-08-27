@@ -1,6 +1,6 @@
 repos:
 -   repo: git://github.com/pre-commit/pre-commit-hooks
-    rev: v1.4.0
+    rev: v2.3.0
     hooks:
     -   id: check-added-large-files
     -   id: check-byte-order-marker
@@ -10,3 +10,7 @@ repos:
     -   id: check-xml
     -   id: check-yaml
     -   id: detect-private-key
+-   repo: https://github.com/pre-commit/mirrors-autopep8
+    rev: 'v1.4.4'
+    hooks:
+    -   id: autopep8
