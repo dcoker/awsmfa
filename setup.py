@@ -36,8 +36,8 @@ setup(
     ],
     zip_safe=False,
     install_requires=[
-        'botocore>=1.4.0',
-        'boto3>=1.3.0',
+        'botocore>=1.12.216',
+        'boto3>=1.9.216',
         'pytz>=2016.1',
         'six>=1.10.0'
     ],
