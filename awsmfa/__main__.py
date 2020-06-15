@@ -1,9 +1,9 @@
 # coding=utf-8
 from __future__ import print_function
+from builtins import input
 
 import argparse
 import datetime
-import getpass
 import os
 import sys
 
@@ -168,7 +168,7 @@ def acquire_code(args, session, session3):
     token_code = args.token_code
     if token_code is None:
         while token_code is None or len(token_code) != 6:
-            token_code = getpass.getpass("MFA Token Code: ")
+            token_code = input("MFA Token Code: ")
     return serial_number, token_code, OK
 
 
