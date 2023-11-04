@@ -168,7 +168,8 @@ def acquire_code(args, session, session3):
     token_code = args.token_code
     if token_code is None:
         while token_code is None or len(token_code) != 6:
-            token_code = input("MFA Token Code: ")
+            sys.stderr.write("MFA Token Code: ")
+            token_code = input()
     return serial_number, token_code, OK
 
 
