@@ -364,6 +364,8 @@ def find_mfa_for_user(user_specified_serial, botocore_session, boto3_session):
 
 def update_credentials_file(filename, target_profile, source_profile,
                             credentials, new_access_key):
+    # reload credentials before writing to avoid conflicts with other processes
+    credentials.read(filename)
     if target_profile != source_profile:
         credentials.remove_section(target_profile)
         # Hack: Python 2's implementation of ConfigParser rejects new sections
