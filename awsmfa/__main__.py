@@ -186,7 +186,7 @@ def rotate(args, credentials):
         args.identity_profile, 'aws_access_key_id')
 
     # create new sessions using the MFA credentials
-    session, session3, err = make_session(args.target_profile)
+    session, session3, err = make_session(args.identity_profile)
     if err:
         return err
     iam = session3.resource('iam')
